@@ -24,7 +24,6 @@ public class RedisLock {
     private long sleepTime;
     private Token token;
 
-
     protected static class Token {
         private static final String INVALID = null;
 
@@ -238,6 +237,12 @@ public class RedisLock {
         }
     }
 
+    /**
+     * Extend the living time for an already acquired lock.
+     *
+     * @param additionalTime the additional time to extern
+     * @return true if extend success otherwise false.
+     */
     public boolean extend(long additionalTime) {
         jedisClient.watch(lockName);
 
@@ -264,5 +269,57 @@ public class RedisLock {
 
         jedisClient.unwatch();
         return false;
+    }
+
+    public Jedis getJedisClient() {
+        return jedisClient;
+    }
+
+    public void setJedisClient(Jedis jedisClient) {
+        this.jedisClient = jedisClient;
+    }
+
+    public String getLockName() {
+        return lockName;
+    }
+
+    public void setLockName(String lockName) {
+        this.lockName = lockName;
+    }
+
+    public long getExpiredTime() {
+        return expiredTime;
+    }
+
+    public void setExpiredTime(long expiredTime) {
+        this.expiredTime = expiredTime;
+    }
+
+    public boolean isBlocking() {
+        return isBlocking;
+    }
+
+    public void setBlocking(boolean blocking) {
+        isBlocking = blocking;
+    }
+
+    public long getBlockingTimeout() {
+        return blockingTimeout;
+    }
+
+    public void setBlockingTimeout(long blockingTimeout) {
+        this.blockingTimeout = blockingTimeout;
+    }
+
+    public long getSleepTime() {
+        return sleepTime;
+    }
+
+    public void setSleepTime(long sleepTime) {
+        this.sleepTime = sleepTime;
+    }
+
+    public String getTokenAsString() {
+        return this.token.getToken();
     }
 }
