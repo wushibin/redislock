@@ -112,7 +112,7 @@ public class NoneBlockingRedisLockTest {
     public void releaseNotAcquiredLock() throws Exception{
         redisLock.release();
         logger.error("Should not print this message");
-        assert(false);
+        assertTrue(false);
     }
 
     @Test(expected=LockException.class)
@@ -132,11 +132,10 @@ public class NoneBlockingRedisLockTest {
 
         redisLock.release();
         logger.error("Should not print this message");
-        assert(false);
+        assertTrue(false);
 
         new Verifications(){{
             redisClient.del(lockName);
         }};
     }
-
 }
