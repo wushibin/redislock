@@ -25,9 +25,8 @@ public class RedisLock {
     private Token token;
 
     protected static class Token {
-        private static final String INVALID = null;
 
-        private String localToken = Token.INVALID;
+        private String localToken = null;
         private ThreadLocal<String> threadToken;
 
         protected Token(boolean threadLocal) {
@@ -35,7 +34,7 @@ public class RedisLock {
                 threadToken = new ThreadLocal<String>() {
                     @Override
                     protected String initialValue() {
-                        return Token.INVALID;
+                        return null;
                     }
                 };
             }
@@ -59,9 +58,17 @@ public class RedisLock {
 
         protected void clean() {
             if (threadToken != null) {
-                threadToken.set(Token.INVALID);
+                threadToken.set(null);
             } else {
-                localToken = Token.INVALID;
+                localToken = null;
+            }
+        }
+
+        public boolean isValid(){
+            if (threadToken != null) {
+                return threadToken.get() != null;
+            } else {
+                return localToken != null;
             }
         }
     }
@@ -182,14 +189,15 @@ public class RedisLock {
     public boolean acquire() throws InterruptedException {
         long stopTryingTime = blockingTimeout;
 
-        String token = this.token.getToken();
-        if (token == Token.INVALID) {
-            token = UUID.randomUUID().toString();
+        String tokenString = this.token.getToken();
+
+        if (tokenString == null){
+            tokenString = UUID.randomUUID().toString();
         }
 
         while (true) {
-            if (doAcquire(token)) {
-                this.token.setToken(token);
+            if (doAcquire(tokenString)) {
+                this.token.setToken(tokenString);
                 return true;
             }
 
@@ -215,20 +223,26 @@ public class RedisLock {
      * Releases the already acquired lock
      */
     public void release() {
-        String token = this.token.getToken();
-        if (token == Token.INVALID) {
+        String tokenString = this.token.getToken();
+
+        if (tokenString == null){
             throw new LockException("The lock is not acquired or already released.");
         }
         this.token.clean();
 
-        doRelease(token);
+        doRelease(tokenString);
     }
 
     private void doRelease(String token) {
         jedisClient.watch(lockName);
 
         String currentToken = jedisClient.get(lockName);
-        if (currentToken == token) {
+        if (currentToken == null){
+            jedisClient.unwatch();
+            return;
+        }
+
+        if (currentToken.equals(token)) {
             Transaction t = jedisClient.multi();
             t.del(lockName);
             t.exec();
@@ -244,27 +258,30 @@ public class RedisLock {
      * @return true if extend success otherwise false.
      */
     public boolean extend(long additionalTime) {
-        jedisClient.watch(lockName);
-
-        String token = this.token.getToken();
-        if (token == Token.INVALID) {
-            jedisClient.unwatch();
+        String tokenString = this.token.getToken();
+        if (tokenString == null){
             throw new LockException("The lock is not acquired or already released.");
         }
 
+        jedisClient.watch(lockName);
         String currentToken = jedisClient.get(lockName);
-        if (token == currentToken) {
+        if (currentToken == null){
+            jedisClient.unwatch();
+            return false;
+        }
+
+        if (tokenString.equals(currentToken)) {
             long expiration = jedisClient.pttl(lockName);
+            if (expiration < 0) {
+                jedisClient.unwatch();
+                return false;
+            }
 
             Transaction t = jedisClient.multi();
             t.pexpire(lockName, expiration + additionalTime);
             List response = t.exec();
 
-            if (response.isEmpty()) {
-                return false;
-            } else {
-                return true;
-            }
+            return (!response.isEmpty()) && ((Long)response.get(0) == 1);
         }
 
         jedisClient.unwatch();

@@ -53,7 +53,7 @@ public class BlockingRedisLockTest {
     }
 
     @Test
-    public void acquireLockNextTimeSuccess() throws Exception {
+    public void acquireLockSuccessAfterFailed() throws Exception {
         new Expectations(){{
             redisClient.setnx(lockName, anyString); returns(0L, 1L, 0L);
             redisClient.pexpire(lockName, anyLong); result = 1L;
@@ -107,4 +107,11 @@ public class BlockingRedisLockTest {
             redisClient.pexpire(lockName, redisLock.getExpiredTime()); times = 2;
         }};
     }
+
+    @Test(expected=LockException.class)
+    public void releaseLockNotAcquired() throws Exception {
+        redisLock.release();
+    }
+
+
 }
