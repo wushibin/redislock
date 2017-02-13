@@ -1,7 +1,6 @@
 package com.github.shibin;
 
 import java.util.List;
-import java.util.UUID;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.Transaction;
