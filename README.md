@@ -2,16 +2,15 @@
 
 ## Implementation
 
-Be encouraged by the python redis library, re-implement the redis distribute lock by using java code.
-The implementation has referred the redis python library.
+Be encouraged by the redis python library, re-implement the redis distribute lock using java.
 
-This library has implemented two kind of redis lock. 
-One usig the native API of Jedis, another using the LUA script.
+This library has implemented two kind of redis lock as referred to the redis python library.. 
+One impelentation using the native API of Jedis, another using the LUA script.
 
 ## Recommendation
 
-Personally recommend the LUA redis lock as it is safer than the native API. 
-For example, when there is a crush between 'SETNX' and 'PEXPIRE', the lock will become never time out.
+Personally the LUA redis lock is recommended as it is safer than the native API. 
+For example, when there is a crush between 'SETNX' and 'PEXPIRE', the lock will never time out.
 
 ## Test
 
